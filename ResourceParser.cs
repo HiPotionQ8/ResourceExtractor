@@ -514,6 +514,57 @@ internal static class ResourceParser {
 		}
 	}
 
+	public static void ParseMapPositions(Stream stream) {
+		const int length = 0x1400;
+		const int entryLength = 0x14;
+		var data = new byte[length];
+		var count = (int) (stream.Length / length);
+		for (var i = 0; i < count; i++) {
+			stream.Position = i * length;
+			stream.Read(data, 0, data.Length);
+
+			data.RotateRight(5);
+
+			using var mstream = new MemoryStream(data);
+			using var reader = new BinaryReader(mstream, Encoding.ASCII, true);
+			reader.ReadBytes(0x04); // Unknown 00 - 03, 00 is the block index, 01 is always 0xF6
+
+			for (var j = 0; j < (length - 0x04) / entryLength; ++j) {
+				dynamic position = ParseMapPosition(reader);
+				if (position == null) {
+					continue;
+				}
+
+				model.map_positions.Add(position);
+			}
+		}
+	}
+
+	private static ModelObject ParseMapPosition(BinaryReader reader) {
+		dynamic position = new ModelObject();
+
+		position.id = reader.ReadInt16();
+		position.type = reader.ReadInt16(); // Map icon type, e.g. 0 = Home Point, 2 = Survival Guide, 3 = Waypoint
+		position.zone = reader.ReadInt16();
+		position.map_id = reader.ReadByte(); // Which of the zone's maps the icon is shown on
+		position.index = reader.ReadByte(); // Number within its type, e.g. the Home Point or Waypoint number
+		var x = reader.ReadInt32();
+		var y = reader.ReadInt32();
+		var z = reader.ReadInt32();
+
+		// Unused slots are zeroed out apart from their ID
+		if (position.zone == 0 && x == 0 && y == 0 && z == 0) {
+			return null;
+		}
+
+		// Coordinates are stored in thousandths of a yalm
+		position.x = x / 1000.0;
+		position.y = y / 1000.0;
+		position.z = z / 1000.0;
+
+		return position;
+	}
+
 	private static void ParseBasicStrings(BinaryReader reader, dynamic item, Languages language) {
 		// This can potentially be used to disambiguate between languages as well, as their string counts are unique
 		reader.ReadUInt32(); // String count

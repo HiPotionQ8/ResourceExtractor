@@ -22,6 +22,7 @@ internal class Program {
 		"job_abilities",
 		"job_traits",
 		"jobs",
+		"map_positions",
 		"monster_skills",
 		"monstrosity",
 		"spells",
@@ -194,6 +195,7 @@ internal class Program {
 
 			LoadItemData(); // Items, Monstrosity
 			LoadMainData(); // Abilities, Spells
+			LoadMapPositions();
 
 			ParseStringTables();
 			Console.WriteLine();
@@ -766,6 +768,19 @@ internal class Program {
 		try {
 			using var file = File.OpenRead(GetPath(0x0051));
 			ResourceParser.ParseMainStream(file);
+		} catch {
+			DisplayError();
+			throw;
+		}
+
+		DisplaySuccess();
+	}
+
+	private static void LoadMapPositions() {
+		DisplayMessage("Loading map positions...");
+		try {
+			using var file = File.OpenRead(GetPath(0xD8D0));
+			ResourceParser.ParseMapPositions(file);
 		} catch {
 			DisplayError();
 			throw;
